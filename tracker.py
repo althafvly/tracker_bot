@@ -8,11 +8,15 @@ from dotenv import load_dotenv
 
 BASE_URL = "https://android.googlesource.com/platform/frameworks/base/"
 REFS_URL = BASE_URL + "+refs"
+GITHUB_API = "https://api.github.com/repos"
 
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
+
+GITHUB_REPOS = os.getenv("GITHUB_REPOS", "")
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
 # Get directory where the script is located (root folder)
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -46,6 +50,21 @@ def fetch_latest_security_tags():
     latest_tags = {version: f"{version}_r{max(revs)}" for version, revs in groups.items()}
     return dict(sorted(latest_tags.items(), key=lambda x: x[0]))
 
+def fetch_latest_github_tags():
+    latest_tags = {}
+    headers = {"Accept": "application/vnd.github.v3+json"}
+    if GITHUB_TOKEN:
+        headers["Authorization"] = f"token {GITHUB_TOKEN}"
+
+    for repo in [r.strip() for r in GITHUB_REPOS.split(",") if r.strip()]:
+        url = f"{GITHUB_API}/{repo}/tags"
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        tags = response.json()
+        if tags:
+            latest_tags[repo] = tags[0]["name"]
+    return latest_tags
+
 def load_saved_tags():
     if not os.path.exists(SAVED_TAGS_FILE):
         return set()
@@ -69,16 +88,30 @@ def send_telegram_message(text):
     response.raise_for_status()
 
 if __name__ == "__main__":
-    latest_tags = fetch_latest_security_tags()
     saved_tags = load_saved_tags()
+    new_tags = set()
 
-    new_tags = {tag for version, tag in latest_tags.items() if tag not in saved_tags}
+    # --- AOSP Tags ---
+    latest_aosp_tags = fetch_latest_security_tags()
+    for version, tag in latest_aosp_tags.items():
+        key = f"AOSP:{tag}"
+        if key not in saved_tags:
+            url = f"{BASE_URL}+/{'refs/tags/' + tag}"
+            message = f'New AOSP tag detected! {tag}\n<a href="{url}">Check Here</a>'
+            send_telegram_message(message)
+            new_tags.add(key)
 
-    for tag in new_tags:
-        url = f"{BASE_URL}+/{'refs/tags/' + tag}"
-        message = f'New tag detected! {tag}\n<a href="{url}">Check Here</a>'
-        send_telegram_message(message)
+    # --- GitHub Tags ---
+    if GITHUB_REPOS:
+        github_tags = fetch_latest_github_tags()
+        for repo, tag in github_tags.items():
+            key = f"GITHUB:{repo}:{tag}"
+            if key not in saved_tags:
+                repo_url = f"https://github.com/{repo}/releases/tag/{tag}"
+                message = f'New GitHub tag detected in <b>{repo}</b>: {tag}\n<a href="{repo_url}">Check Here</a>'
+                send_telegram_message(message)
+                new_tags.add(key)
 
-    # Update saved tags with latest tags
-    all_tags = saved_tags.union({tag for version, tag in latest_tags.items()})
+    # Save combined tags
+    all_tags = saved_tags.union(new_tags)
     save_tags(all_tags)
