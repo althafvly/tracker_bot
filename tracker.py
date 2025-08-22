@@ -4,11 +4,13 @@ import requests
 from bs4 import BeautifulSoup
 from collections import defaultdict
 import os
+import urllib.parse
 from dotenv import load_dotenv
 
 BASE_URL = "https://android.googlesource.com/platform/frameworks/base/"
 REFS_URL = BASE_URL + "+refs"
 GITHUB_API = "https://api.github.com/repos"
+GITLAB_API = "https://gitlab.com/api/v4/projects"
 
 load_dotenv()
 
@@ -17,6 +19,9 @@ CHAT_ID = os.getenv("CHAT_ID")
 
 GITHUB_REPOS = os.getenv("GITHUB_REPOS", "")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+
+GITLAB_REPOS = os.getenv("GITLAB_REPOS", "")
+GITLAB_TOKEN = os.getenv("GITLAB_TOKEN")
 
 # Get directory where the script is located (root folder)
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -58,6 +63,22 @@ def fetch_latest_github_tags():
 
     for repo in [r.strip() for r in GITHUB_REPOS.split(",") if r.strip()]:
         url = f"{GITHUB_API}/{repo}/tags"
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        tags = response.json()
+        if tags:
+            latest_tags[repo] = tags[0]["name"]
+    return latest_tags
+
+def fetch_latest_gitlab_tags():
+    latest_tags = {}
+    headers = {"Accept": "application/json"}
+    if GITLAB_TOKEN:
+        headers["PRIVATE-TOKEN"] = GITLAB_TOKEN
+
+    for repo in [r.strip() for r in GITLAB_REPOS.split(",") if r.strip()]:
+        project = urllib.parse.quote_plus(repo)
+        url = f"{GITLAB_API}/{project}/repository/tags"
         response = requests.get(url, headers=headers)
         response.raise_for_status()
         tags = response.json()
@@ -112,6 +133,18 @@ if __name__ == "__main__":
                 send_telegram_message(message)
                 new_tags.add(key)
 
+    # --- GitLab Tags ---
+    if GITLAB_REPOS:
+        gitlab_tags = fetch_latest_gitlab_tags()
+        for repo, tag in gitlab_tags.items():
+            key = f"GITLAB:{repo}:{tag}"
+            if key not in saved_tags:
+                repo_url = f"https://gitlab.com/{repo}/-/tags/{tag}"
+                message = f'New GitLab tag detected in <b>{repo}</b>: {tag}\n<a href="{repo_url}">Check Here</a>'
+                send_telegram_message(message)
+                new_tags.add(key)
+
     # Save combined tags
     all_tags = saved_tags.union(new_tags)
     save_tags(all_tags)
+
