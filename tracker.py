@@ -5,7 +5,9 @@ from bs4 import BeautifulSoup
 from collections import defaultdict
 import os
 import urllib.parse
+import subprocess
 from dotenv import load_dotenv
+from packaging import version as pkg_version
 
 BASE_URL = "https://android.googlesource.com/platform/frameworks/base/"
 REFS_URL = BASE_URL + "+refs"
@@ -22,6 +24,8 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
 GITLAB_REPOS = os.getenv("GITLAB_REPOS", "")
 GITLAB_TOKEN = os.getenv("GITLAB_TOKEN")
+
+GENERIC_GIT_REPOS = os.getenv("GENERIC_GIT_REPOS", "")
 
 # Get directory where the script is located (root folder)
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -86,6 +90,34 @@ def fetch_latest_gitlab_tags():
             latest_tags[repo] = tags[0]["name"]
     return latest_tags
 
+def fetch_latest_git_tags(repo_url):
+    try:
+        result = subprocess.run(
+            ["git", "ls-remote", "--tags", repo_url],
+            capture_output=True, text=True, check=True
+        )
+        tags = []
+        for line in result.stdout.splitlines():
+            if "refs/tags/" in line:
+                tag = line.split("refs/tags/")[1]
+                tag = tag.replace("^{}", "")
+                tags.append(tag)
+        if tags:
+            tags = sorted(tags, key=safe_version_parse)
+        return tags
+    except Exception as e:
+        print(f"Failed to fetch tags from {repo_url}: {e}")
+        return []
+
+def safe_version_parse(tag: str):
+    """Try to parse as semantic version, otherwise return the raw tag for fallback sorting."""
+    tag_clean = tag.lstrip('v')
+    try:
+        return pkg_version.parse(tag_clean)
+    except Exception:
+        # fallback: ensure non-semver tags still sort consistently
+        return pkg_version.parse("0")  # put unknowns at the bottom
+
 def load_saved_tags():
     if not os.path.exists(SAVED_TAGS_FILE):
         return set()
@@ -143,6 +175,30 @@ if __name__ == "__main__":
                 message = f'New GitLab tag detected in <b>{repo}</b>: {tag}\n<a href="{repo_url}">Check Here</a>'
                 send_telegram_message(message)
                 new_tags.add(key)
+
+    # --- Generic Git Tags (SourceForge, Bitbucket, etc.) ---
+    if GENERIC_GIT_REPOS:
+        for repo_url in [r.strip() for r in GENERIC_GIT_REPOS.split(",") if r.strip()]:
+            tags = fetch_latest_git_tags(repo_url)
+            if tags:
+                latest_tag = tags[-1]  # newest semantically sorted tag
+                key = f"GENERIC:{repo_url}:{latest_tag}"
+                if key not in saved_tags:
+                    # Try to detect if it's a SourceForge repo
+                    if "git.code.sf.net" in repo_url:
+                        # Extract project name: https://git.code.sf.net/p/<project>/code
+                        parts = repo_url.split("/")
+                        project = parts[4] if len(parts) > 4 else "unknown"
+                        repo_url_display = f"https://sourceforge.net/p/{project}/code/ci/{latest_tag}/tree/"
+                    else:
+                        repo_url_display = repo_url  # fallback: raw repo URL
+
+                    message = (
+                        f'New Git tag detected in <b>{project}</b>: {latest_tag}\n'
+                        f'<a href="{repo_url_display}">Check Here</a>'
+                    )
+                    send_telegram_message(message)
+                    new_tags.add(key)
 
     # Save combined tags
     all_tags = saved_tags.union(new_tags)
