@@ -6,7 +6,7 @@ from collections import defaultdict
 import os
 import urllib.parse
 import subprocess
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 from packaging import version as pkg_version
 
 BASE_URL = "https://android.googlesource.com/platform/frameworks/base/"
@@ -14,7 +14,11 @@ REFS_URL = BASE_URL + "+refs"
 GITHUB_API = "https://api.github.com/repos"
 GITLAB_API = "https://gitlab.com/api/v4/projects"
 
-load_dotenv()
+dotenv_path = find_dotenv()
+if dotenv_path:
+    load_dotenv(dotenv_path, override=False)
+else:
+    print("No .env file found. Using system environment variables.")
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
@@ -29,7 +33,11 @@ GENERIC_GIT_REPOS = os.getenv("GENERIC_GIT_REPOS", "")
 
 # Get directory where the script is located (root folder)
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-SAVED_TAGS_FILE = os.path.join(ROOT_DIR, "saved_tags.txt")
+
+DATA_DIR = os.path.join(ROOT_DIR, "data")
+os.makedirs(DATA_DIR, exist_ok=True)
+
+SAVED_TAGS_FILE = os.path.join(DATA_DIR, "saved_tags.txt")
 
 def fetch_latest_security_tags():
     response = requests.get(REFS_URL)
@@ -131,14 +139,19 @@ def save_tags(tags):
 
 def send_telegram_message(text):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": CHAT_ID,
-        "text": text,
-        "parse_mode": "HTML",
-        "disable_web_page_preview": True,
-    }
-    response = requests.post(url, data=payload)
-    response.raise_for_status()
+    
+    # Support multiple chat IDs (comma-separated string)
+    chat_ids = [chat_id.strip() for chat_id in CHAT_ID.split(",") if chat_id.strip()]
+    
+    for chat_id in chat_ids:
+        payload = {
+            "chat_id": chat_id,
+            "text": text,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True,
+        }
+        response = requests.post(url, data=payload)
+        response.raise_for_status()
 
 if __name__ == "__main__":
     saved_tags = load_saved_tags()

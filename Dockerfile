@@ -15,5 +15,9 @@ RUN git config --global user.name "TrackerBot" \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy your application code
+COPY tracker.py /app
+
 # Default command: run every 15 minutes
 CMD ["sh", "-c", "while true; do python tracker.py; sleep 900; done"]
+
