@@ -1,0 +1,15 @@
+version: "3.9"
+
+services:
+  app:
+    image: ghcr.io/althafvly/tracker:latest
+    container_name: tracker
+    environment:
+      - BOT_TOKEN=xxxxx:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      - CHAT_ID=123456123,12345614
+      - GITHUB_REPOS=docker/compose,blakeblackshear/frigate
+      - GITLAB_REPOS=AuroraOSS/gplayapi
+      - GENERIC_GIT_REPOS=https://git.code.sf.net/p/opencamera/code
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
