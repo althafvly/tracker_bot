@@ -137,6 +137,19 @@ def save_tags(tags):
         for tag in sorted(tags):
             f.write(tag + "\n")
 
+def fetch_latest_chromium_android_stable():
+    """Fetch the latest Chromium stable version for Android."""
+    url = "https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Android&num=1"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        if data and isinstance(data, list):
+            return data[0].get("version")
+    except Exception as e:
+        print(f"Failed to fetch Chromium Android stable version: {e}")
+    return None
+
 def send_telegram_message(text):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     
@@ -212,6 +225,19 @@ if __name__ == "__main__":
                     )
                     send_telegram_message(message)
                     new_tags.add(key)
+
+    # --- Chromium Android Stable ---
+    chromium_version = fetch_latest_chromium_android_stable()
+    if chromium_version:
+        key = f"CHROMIUM_ANDROID:{chromium_version}"
+        if key not in saved_tags:
+            url = f"https://chromium.googlesource.com/chromium/src/+/refs/tags/{chromium_version}"
+            message = (
+                f'New Chromium Android Stable version detected: <b>{chromium_version}</b>\n'
+                f'<a href="{url}">Check Here</a>'
+            )
+            send_telegram_message(message)
+            new_tags.add(key)
 
     # Save combined tags
     all_tags = saved_tags.union(new_tags)
