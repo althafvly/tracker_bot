@@ -8,6 +8,7 @@ import urllib.parse
 import subprocess
 from dotenv import load_dotenv, find_dotenv
 from packaging import version as pkg_version
+from packaging.version import Version
 
 BASE_URL = "https://android.googlesource.com/platform/frameworks/base/"
 REFS_URL = BASE_URL + "+refs"
@@ -139,15 +140,20 @@ def save_tags(tags):
 
 def fetch_latest_chromium_android_stable():
     """Fetch the latest Chromium stable version for Android."""
-    url = "https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Android&num=1"
+    url = "https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Android&num=5"
     try:
         response = requests.get(url)
         response.raise_for_status()
         data = response.json()
+
         if data and isinstance(data, list):
-            return data[0].get("version")
+            versions = [item.get("version") for item in data if item.get("version")]
+            if versions:
+                return max(versions, key=Version)   # take the highest version
+
     except Exception as e:
         print(f"Failed to fetch Chromium Android stable version: {e}")
+
     return None
 
 def send_telegram_message(text):
