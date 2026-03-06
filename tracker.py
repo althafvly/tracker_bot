@@ -9,6 +9,8 @@ import subprocess
 from dotenv import load_dotenv, find_dotenv
 from packaging import version as pkg_version
 from packaging.version import Version
+import asyncio
+from telethon import TelegramClient
 
 BASE_URL = "https://android.googlesource.com/platform/frameworks/base/"
 REFS_URL = BASE_URL + "+refs"
@@ -23,6 +25,11 @@ else:
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
+
+TG_USER_ENABLED = os.getenv("TG_USER_ENABLED", "false").lower() == "true"
+TG_API_ID = os.getenv("TG_API_ID")
+TG_API_HASH = os.getenv("TG_API_HASH")
+TG_USER_TARGETS = os.getenv("TG_USER_TARGETS", "")
 
 GITHUB_REPOS = os.getenv("GITHUB_REPOS", "")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
@@ -39,6 +46,15 @@ DATA_DIR = os.path.join(ROOT_DIR, "data")
 os.makedirs(DATA_DIR, exist_ok=True)
 
 SAVED_TAGS_FILE = os.path.join(DATA_DIR, "saved_tags.txt")
+
+telethon_client = None
+
+if TG_USER_ENABLED and TG_API_ID and TG_API_HASH:
+    telethon_client = TelegramClient(
+        os.path.join(DATA_DIR, "telegram_user_session"),
+        int(TG_API_ID),
+        TG_API_HASH
+    )
 
 def fetch_latest_security_tags():
     response = requests.get(REFS_URL)
@@ -156,12 +172,27 @@ def fetch_latest_chromium_android_stable():
 
     return None
 
-def send_telegram_message(text):
+async def send_telegram_message(text):
+
+    # --- USER ACCOUNT MODE ---
+    if TG_USER_ENABLED and telethon_client:
+        targets = [c.strip() for c in TG_USER_TARGETS.split(",") if c.strip()]
+
+        for target in targets:
+            await telethon_client.send_message(
+                target,
+                text,
+                parse_mode="html",
+                link_preview=False
+            )
+        return
+
+    # --- BOT MODE ---
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    
+
     # Support multiple chat IDs (comma-separated string)
     chat_ids = [chat_id.strip() for chat_id in CHAT_ID.split(",") if chat_id.strip()]
-    
+
     for chat_id in chat_ids:
         payload = {
             "chat_id": chat_id,
@@ -169,10 +200,10 @@ def send_telegram_message(text):
             "parse_mode": "HTML",
             "disable_web_page_preview": True,
         }
-        response = requests.post(url, data=payload)
-        response.raise_for_status()
 
-if __name__ == "__main__":
+        requests.post(url, data=payload).raise_for_status()
+
+async def main():
     saved_tags = load_saved_tags()
     new_tags = set()
 
@@ -183,7 +214,7 @@ if __name__ == "__main__":
         if key not in saved_tags:
             url = f"{BASE_URL}+/{'refs/tags/' + tag}"
             message = f'New AOSP tag detected! {tag}\n<a href="{url}">Check Here</a>'
-            send_telegram_message(message)
+            await send_telegram_message(message)
             new_tags.add(key)
 
     # --- GitHub Tags ---
@@ -194,7 +225,7 @@ if __name__ == "__main__":
             if key not in saved_tags:
                 repo_url = f"https://github.com/{repo}/releases/tag/{tag}"
                 message = f'New GitHub tag detected in <b>{repo}</b>: {tag}\n<a href="{repo_url}">Check Here</a>'
-                send_telegram_message(message)
+                await send_telegram_message(message)
                 new_tags.add(key)
 
     # --- GitLab Tags ---
@@ -205,7 +236,7 @@ if __name__ == "__main__":
             if key not in saved_tags:
                 repo_url = f"https://gitlab.com/{repo}/-/tags/{tag}"
                 message = f'New GitLab tag detected in <b>{repo}</b>: {tag}\n<a href="{repo_url}">Check Here</a>'
-                send_telegram_message(message)
+                await send_telegram_message(message)
                 new_tags.add(key)
 
     # --- Generic Git Tags (SourceForge, Bitbucket, etc.) ---
@@ -229,7 +260,7 @@ if __name__ == "__main__":
                         f'New Git tag detected in <b>{project}</b>: {latest_tag}\n'
                         f'<a href="{repo_url_display}">Check Here</a>'
                     )
-                    send_telegram_message(message)
+                    await send_telegram_message(message)
                     new_tags.add(key)
 
     # --- Chromium Android Stable ---
@@ -242,10 +273,18 @@ if __name__ == "__main__":
                 f'New Chromium Android Stable version detected: <b>{chromium_version}</b>\n'
                 f'<a href="{url}">Check Here</a>'
             )
-            send_telegram_message(message)
+            await send_telegram_message(message)
             new_tags.add(key)
 
     # Save combined tags
     all_tags = saved_tags.union(new_tags)
     save_tags(all_tags)
 
+if __name__ == "__main__":
+
+    async def runner():
+        if TG_USER_ENABLED and telethon_client:
+            await telethon_client.start()
+        await main()
+
+    asyncio.run(runner())
