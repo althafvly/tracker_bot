@@ -10,6 +10,12 @@ services:
       - GITHUB_REPOS=docker/compose,blakeblackshear/frigate
       - GITLAB_REPOS=AuroraOSS/gplayapi
       - GENERIC_GIT_REPOS=https://git.code.sf.net/p/opencamera/code
+      # optional user mode
+      - TG_USER_ENABLED=false
+      - TG_API_ID=xxxxx # From https://my.telegram.org/apps
+      - TG_API_HASH=xxxxxxxxxxxxxxxxxxxxxxxxxxx # From https://my.telegram.org/apps
+      - TG_USER_TARGETS=-12345678 # User/group chatgpt
+
     volumes:
       - ./data:/app/data
     restart: unless-stopped
