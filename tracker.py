@@ -179,8 +179,10 @@ async def send_telegram_message(text):
         targets = [c.strip() for c in TG_USER_TARGETS.split(",") if c.strip()]
 
         for target in targets:
+            entity = await telethon_client.get_entity(int(target))
+
             await telethon_client.send_message(
-                target,
+                entity,
                 text,
                 parse_mode="html",
                 link_preview=False
