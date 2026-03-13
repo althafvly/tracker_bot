@@ -176,6 +176,7 @@ async def send_telegram_message(text):
 
     # --- USER ACCOUNT MODE ---
     if TG_USER_ENABLED and telethon_client:
+        text += "\n\n—\n🤖 <i>This is an automated message.</i>"
         targets = [c.strip() for c in TG_USER_TARGETS.split(",") if c.strip()]
 
         for target in targets:
@@ -215,7 +216,7 @@ async def main():
         key = f"AOSP:{tag}"
         if key not in saved_tags:
             url = f"{BASE_URL}+/{'refs/tags/' + tag}"
-            message = f'New AOSP tag detected! {tag}\n<a href="{url}">Check Here</a>'
+            message = f'📱 <b>AOSP:</b> New tag <code>{tag}</code> detected!\n🔗 <a href="{url}">Check Here</a>'
             await send_telegram_message(message)
             new_tags.add(key)
 
@@ -226,7 +227,7 @@ async def main():
             key = f"GITHUB:{repo}:{tag}"
             if key not in saved_tags:
                 repo_url = f"https://github.com/{repo}/releases/tag/{tag}"
-                message = f'New GitHub tag detected in <b>{repo}</b>: {tag}\n<a href="{repo_url}">Check Here</a>'
+                message = f'🐙 <b>GitHub:</b> New tag <code>{tag}</code> in <b>{repo}</b>\n🔗 <a href="{repo_url}">Check Here</a>'
                 await send_telegram_message(message)
                 new_tags.add(key)
 
@@ -237,7 +238,7 @@ async def main():
             key = f"GITLAB:{repo}:{tag}"
             if key not in saved_tags:
                 repo_url = f"https://gitlab.com/{repo}/-/tags/{tag}"
-                message = f'New GitLab tag detected in <b>{repo}</b>: {tag}\n<a href="{repo_url}">Check Here</a>'
+                message = f'🦊 <b>GitLab:</b> New tag <code>{tag}</code> in <b>{repo}</b>\n🔗 <a href="{repo_url}">Check Here</a>'
                 await send_telegram_message(message)
                 new_tags.add(key)
 
@@ -259,8 +260,8 @@ async def main():
                         repo_url_display = repo_url  # fallback: raw repo URL
 
                     message = (
-                        f'New Git tag detected in <b>{project}</b>: {latest_tag}\n'
-                        f'<a href="{repo_url_display}">Check Here</a>'
+                        f'🏷️ <b>Git Tag:</b> New tag <code>{latest_tag}</code> in <b>{project}</b>\n'
+                        f'🔗 <a href="{repo_url_display}">Check Here</a>'
                     )
                     await send_telegram_message(message)
                     new_tags.add(key)
@@ -272,8 +273,8 @@ async def main():
         if key not in saved_tags:
             url = f"https://chromium.googlesource.com/chromium/src/+/refs/tags/{chromium_version}"
             message = (
-                f'New Chromium Android Stable version detected: <b>{chromium_version}</b>\n'
-                f'<a href="{url}">Check Here</a>'
+                f'🌐 <b>Chromium:</b> New Android Stable version <code>{chromium_version}</code>\n'
+                f'🔗 <a href="{url}">Check Here</a>'
             )
             await send_telegram_message(message)
             new_tags.add(key)
