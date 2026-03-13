@@ -15,6 +15,7 @@ services:
       - TG_API_ID=xxxxx # From https://my.telegram.org/apps
       - TG_API_HASH=xxxxxxxxxxxxxxxxxxxxxxxxxxx # From https://my.telegram.org/apps
       - TG_USER_TARGETS=-12345678 # User/group chatgpt
+      - CHECK_INTERVAL=900 # Check every 15 minutes
 
     volumes:
       - ./data:/app/data

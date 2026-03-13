@@ -39,6 +39,9 @@ GITLAB_TOKEN = os.getenv("GITLAB_TOKEN")
 
 GENERIC_GIT_REPOS = os.getenv("GENERIC_GIT_REPOS", "")
 
+_interval = os.getenv("CHECK_INTERVAL")
+CHECK_INTERVAL = int(_interval) if _interval else None
+
 # Get directory where the script is located (root folder)
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -290,6 +293,19 @@ if __name__ == "__main__":
     async def runner():
         if TG_USER_ENABLED and telethon_client:
             await telethon_client.start()
-        await main()
+
+        if not CHECK_INTERVAL:
+            await main()
+            return
+
+        print(f"Loop mode enabled (interval: {CHECK_INTERVAL}s). Starting tracker...")
+        while True:
+            try:
+                await main()
+            except Exception as e:
+                print(f"Error in main loop: {e}")
+
+            print(f"Sleeping for {CHECK_INTERVAL}s...")
+            await asyncio.sleep(CHECK_INTERVAL)
 
     asyncio.run(runner())
