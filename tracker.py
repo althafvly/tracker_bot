@@ -188,6 +188,7 @@ async def send_telegram_message(text):
                 parse_mode="html",
                 link_preview=False
             )
+            print(f"Sent message to user entity {target}: {text.splitlines()[0]}")
         return
 
     # --- BOT MODE ---
@@ -205,6 +206,7 @@ async def send_telegram_message(text):
         }
 
         requests.post(url, data=payload).raise_for_status()
+        print(f"Sent message to chat {chat_id}: {text.splitlines()[0]}")
 
 async def main():
     saved_tags = load_saved_tags()
