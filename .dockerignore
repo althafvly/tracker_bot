@@ -3,6 +3,9 @@
 Dockerfile
 docker-compose.yml
 .dockerignore
-venv
 .env
 
+# Python
+__pycache__/
+venv/
+.venv/

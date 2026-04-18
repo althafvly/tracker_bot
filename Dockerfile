@@ -11,13 +11,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN git config --global user.name "TrackerBot" \
     && git config --global user.email "trackerbot@example.com"
 
-# Install dependencies
+# Copy only required files
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy your application code
-COPY tracker.py /app
+COPY trackers/ ./trackers/
+COPY config.py main.py notifier.py utils.py ./
 
 # Default command
-CMD ["python", "tracker.py"]
-
+CMD ["python", "main.py"]
