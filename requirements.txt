@@ -11,4 +11,4 @@ rsa==4.9.1
 soupsieve==2.8.3
 Telethon==1.43.1
 typing_extensions==4.15.0
-urllib3==2.6.3
+urllib3==2.7.0
