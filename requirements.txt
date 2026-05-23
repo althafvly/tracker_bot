@@ -1,7 +1,7 @@
 beautifulsoup4==4.14.3
 certifi==2026.4.22
 charset-normalizer==3.4.7
-idna==3.15
+idna==3.16
 packaging==26.2
 pyaes==1.6.1
 pyasn1==0.6.3
