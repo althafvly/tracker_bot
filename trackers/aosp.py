@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 from collections import defaultdict
 import logging
+import re
 from typing import List, Set, Tuple
 from .base import BaseTracker
 from config import AOSP_REFS_URL, AOSP_BASE_URL
@@ -30,7 +31,8 @@ class AOSPTracker(BaseTracker):
                     tag = li.text.strip()
                     if tag.startswith("android-security-") or tag.startswith("android-platform-"):
                         tags.append(tag)
-                    if tag.startswith("android-15") or tag.startswith("android-16") or tag.startswith("android-17"):
+                    match = re.match(r"^android-(\d+)", tag)
+                    if match and int(match.group(1)) > 16:
                         tags.append(tag)
 
         groups = defaultdict(list)
