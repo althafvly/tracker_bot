@@ -30,7 +30,7 @@ class AOSPTracker(BaseTracker):
                     tag = li.text.strip()
                     if tag.startswith("android-security-") or tag.startswith("android-platform-"):
                         tags.append(tag)
-                    if tag.startswith("android-15") or tag.startswith("android-16"):
+                    if tag.startswith("android-15") or tag.startswith("android-16") or tag.startswith("android-17"):
                         tags.append(tag)
 
         groups = defaultdict(list)
