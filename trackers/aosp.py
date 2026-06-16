@@ -23,6 +23,7 @@ class AOSPTracker(BaseTracker):
 
         page = BeautifulSoup(response.content, "html.parser")
         tags = []
+        branches = []
 
         for section in page.find_all("div", {"class": "RefList"}):
             title = section.find("h3", {"class": "RefList-title"})
@@ -34,6 +35,12 @@ class AOSPTracker(BaseTracker):
                     match = re.match(r"^android-(\d+)", tag)
                     if match and int(match.group(1)) > 16:
                         tags.append(tag)
+            if title and "Branches" in title.text:
+                for li in section.find_all("li"):
+                    branch = li.text.strip()
+                    match = re.match(r"^android(\d+)", branch)
+                    if match and int(match.group(1)) > 16:
+                        branches.append(branch)
 
         groups = defaultdict(list)
         for tag in tags:
@@ -52,6 +59,13 @@ class AOSPTracker(BaseTracker):
             if key not in saved_tags:
                 url = f"{AOSP_BASE_URL}+/{'refs/tags/' + tag}"
                 message = f'📱 <b>AOSP:</b> New tag <code>{tag}</code> detected!\n🔗 <a href="{url}">Check Here</a>'
+                updates.append((key, message))
+
+        for branch in sorted(set(branches)):
+            key = f"AOSP:{branch}"
+            if key not in saved_tags:
+                url = f"{AOSP_BASE_URL}+/{'refs/heads/' + branch}"
+                message = f'📱 <b>AOSP:</b> New branch <code>{branch}</code> detected!\n🔗 <a href="{url}">Check Here</a>'
                 updates.append((key, message))
 
         return updates
