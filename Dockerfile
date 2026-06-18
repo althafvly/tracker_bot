@@ -19,4 +19,10 @@ COPY trackers/ ./trackers/
 COPY config.py main.py notifier.py utils.py ./
 
 # Default command
-CMD ["python", "main.py"]
+CMD ["/bin/bash", "-c", " \
+    set -e; \
+    if [ -f /app/venv/bin/activate ]; then \
+        source /app/venv/bin/activate; \
+    fi; \
+    python main.py; \
+"]
