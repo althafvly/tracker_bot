@@ -8,7 +8,7 @@ pyasn1==0.6.4
 python-dotenv==1.2.3
 requests==2.34.2
 rsa==4.9.1
-soupsieve==2.9.2
+soupsieve==2.10
 Telethon==1.45.0
 typing_extensions==4.16.0
 urllib3==2.8.0
